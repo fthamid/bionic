@@ -1,0 +1,51 @@
+---
+
+- name: deploy
+  hosts: all
+  gather_facts: false
+  become: true
+  tasks:
+    - name: create user hamid
+      user:
+        name: hamid
+        state: present
+        shell: /bin/bash
+        password: "{{ 'unimatel64' | password_hash('sha512') }}"
+        update_password: on_create
+
+    
+
+    - name:  sudo
+      copy:
+        dest: "/etc/sudoers.d/hamid"
+        content: "hamid ALL=(root) NOPASSWD: ALL"
+    
+    - name: add ssh key for hamid
+      authorized_key:
+          user: hamid
+          key: "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMCbJVBirWxtW19TXPNX8K5kQGVIsETJhV5LJ6VtvQwI ansible2"
+    
+    - name: ssh config update
+      lineinfile:
+         path: /etc/ssh/ssh_config
+         regexp: "^PasswordAuthentication"
+         line: "PasswordAuthentication yes"
+      notify: restart_sshd
+
+    - name: set keyboard type
+      lineinfile:
+        path: /etc/default/keyboard 
+        regexp: "^XKBLAYOUT"
+        line: "XKBLAYOUT='fr'"
+      notify: reboot_machine
+
+  handlers:
+    - name: restart_sshd
+      service: 
+        name: sshd
+        state: restarted
+    
+    - name: reboot_machine 
+      ansible.builtin.reboot:
+        msg: "Rebooting machine in 5 seconds"
+
